@@ -6,14 +6,15 @@ from typing import List
 import events as e
 from .callbacks import state_to_features
 
-# This is only an example!
+
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
-# Hyper parameters -- DO modify
-TRANSITION_HISTORY_SIZE = 3  # keep only ... last transitions
-RECORD_ENEMY_TRANSITIONS = 1.0  # record enemy transitions with probability ...
+# Hyper parameters
+TRANSITION_HISTORY_SIZE = 3
+RECORD_ENEMY_TRANSITIONS = 1.0
 
+# TODO: create custom wall event
 # Events
 PLACEHOLDER_EVENT = "PLACEHOLDER"
 
@@ -50,9 +51,14 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
 
-    # Idea: Add your own events to hand out rewards
+    # TODO: Get the state from state_to_feature and append custom event for presence of wall or not
+
+    # TODO: condition check for this would be game_state[action] != wall_direction ? WALL_AVOIDED : WALL_HIT
+    # Idea: Check for the walls nearby
     if ...:
         events.append(PLACEHOLDER_EVENT)
+
+    # TODO: calculate and update the q_value in the table; in this case q_value=reward
 
     # state_to_features is defined in callbacks.py
     self.transitions.append(Transition(state_to_features(old_game_state), self_action, state_to_features(new_game_state), reward_from_events(self, events)))
@@ -75,8 +81,10 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.transitions.append(Transition(state_to_features(last_game_state), last_action, None, reward_from_events(self, events)))
 
     # Store the model
-    with open("my-saved-model.pt", "wb") as file:
-        pickle.dump(self.model, file)
+    # with open("my-saved-model.pt", "wb") as file:
+    #     pickle.dump(self.model, file)
+
+    # TODO: update the Q_table and and save the table in .npy file
 
 
 def reward_from_events(self, events: List[str]) -> int:

@@ -9,10 +9,17 @@ ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 
 
 def setup(self):
+    q_table_folder = "q_tables/"
+    self.new_state = None
+    self.old_state = None
+    self.valid_state_list = ['UP', 'DOWN', 'LEFT', 'RIGHT']
     if self.train:
         self.logger.info("Q-learning agent from scratch")
-        weights = np.random.rand(len(ACTIONS))
-        self.model = weights / weights.sum()
+        self.number_of_states = len(self.valid_state_list)
+        self.Q_table = np.zeros(shape=(self.number_of_states, len(ACTIONS))) # currently 4 * 6
+        # weights = np.random.rand(len(ACTIONS))
+        # self.model = weights / weights.sum()
+        self.exploration_rate = 0.6 #random choice
     else:
         self.logger.info("Loading model from saved state.")
         with open("my-saved-model.pt", "rb") as file:
@@ -32,11 +39,12 @@ def act(self, game_state: dict) -> str:
     random_prob = .1
     if self.train and random.random() < random_prob:
         self.logger.debug("Choosing action purely at random.")
-        # 80%: walk in any direction. 10% wait. 10% bomb.
-        return np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .1, .1])
+        # taking a random action for exploration
+        return np.random.choice(ACTIONS)
 
     self.logger.debug("Querying model for action.")
-    return np.random.choice(ACTIONS, p=self.model)
+    # TODO: here I need to return and answer from the q-table
+    return np.random.choice(ACTIONS)
 
 
 def state_to_features(game_state: dict) -> np.array:
@@ -53,6 +61,8 @@ def state_to_features(game_state: dict) -> np.array:
     :param game_state:  A dictionary describing the current game board.
     :return: np.array
     """
+
+    # TODO: Create a feature that tells you the presence of walls and its direction near the agent
     # This is the dict before the game begins and after it ends
     if game_state is None:
         return None
