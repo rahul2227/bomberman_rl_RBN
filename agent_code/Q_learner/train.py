@@ -5,7 +5,7 @@ from typing import List
 
 import events as e
 from .callbacks import state_to_features
-
+from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -14,7 +14,7 @@ Transition = namedtuple('Transition',
 TRANSITION_HISTORY_SIZE = 3
 RECORD_ENEMY_TRANSITIONS = 1.0
 
-# TODO: create custom wall event
+
 # Events
 PLACEHOLDER_EVENT = "PLACEHOLDER"
 
@@ -53,15 +53,25 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
     # TODO: Get the state from state_to_feature and append custom event for presence of wall or not
 
-    # TODO: condition check for this would be game_state[action] != wall_direction ? WALL_AVOIDED : WALL_HIT
-    # Idea: Check for the walls nearby
-    if ...:
-        events.append(PLACEHOLDER_EVENT)
+    print("This is the old game state", old_game_state.keys())
+    print("This is the new game state", new_game_state.keys())
+    self.new_state = state_to_features(self, new_game_state)
+    print("This is the new game state", self.new_state.keys())
+
+    new_agent_position = new_game_state['self'][-1]
+
+    # Idea is to check if the agent has hit the wall by checking
+    # if the agent is at the same location after the change happened
+
+    if new_agent_position == old_game_state['self'][-1]:
+        events.append(OBSTACLE_HIT)
+    else:
+        events.append(OBSTACLE_AVOID)
 
     # TODO: calculate and update the q_value in the table; in this case q_value=reward
-
+    reward = reward_from_events(self, events)
     # state_to_features is defined in callbacks.py
-    self.transitions.append(Transition(state_to_features(old_game_state), self_action, state_to_features(new_game_state), reward_from_events(self, events)))
+    self.transitions.append(Transition(state_to_features(self, old_game_state), self_action, state_to_features(self, new_game_state), reward_from_events(self, events)))
 
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
@@ -78,7 +88,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     :param self: The same object that is passed to all of your callbacks.
     """
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
-    self.transitions.append(Transition(state_to_features(last_game_state), last_action, None, reward_from_events(self, events)))
+    self.transitions.append(Transition(state_to_features(self, last_game_state), last_action, None, reward_from_events(self, events)))
 
     # Store the model
     # with open("my-saved-model.pt", "wb") as file:
@@ -97,7 +107,9 @@ def reward_from_events(self, events: List[str]) -> int:
     game_rewards = {
         e.COIN_COLLECTED: 1,
         e.KILLED_OPPONENT: 5,
-        PLACEHOLDER_EVENT: -.1  # idea: the custom event is bad
+        PLACEHOLDER_EVENT: -.1,  # idea: the custom event is bad
+        OBSTACLE_HIT: 1,
+        OBSTACLE_AVOID: -.5,
     }
     reward_sum = 0
     for event in events:
