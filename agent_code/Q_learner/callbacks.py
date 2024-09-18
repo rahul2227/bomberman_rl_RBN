@@ -4,9 +4,7 @@ import random
 
 import numpy as np
 
-from agent_code.Q_learner.helpers import WALL_RIGHT, WALL_UP, WALL_DOWN, WALL_LEFT
-
-ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
+from agent_code.Q_learner.helpers import WALL_RIGHT, WALL_UP, WALL_DOWN, WALL_LEFT, ACTIONS
 
 
 def setup(self):
@@ -20,66 +18,60 @@ def setup(self):
         self.Q_table = np.zeros(shape=(self.number_of_states, len(ACTIONS)))  # currently 4 * 6
         # weights = np.random.rand(len(ACTIONS))
         # self.model = weights / weights.sum()
-        self.exploration_rate = 0.6  #random choice
+        self.exploration_rate = 0.2  #random choice
     else:
-        self.logger.info("Loading model from saved state.")
-        with open("my-saved-model.pt", "rb") as file:
-            self.model = pickle.load(file)
+        self.logger.info("Loading q-table from saved state.")
+        self.Q_table = load_q_table(self, q_table_folder)
 
 
 def act(self, game_state: dict) -> str:
-    """
-    Your agent should parse the input, think, and take a decision.
-    When not in training mode, the maximum execution time for this method is 0.5s.
+    # updating the custom state so that features can be accessible
+    if self.new_state is None:
+        self.old_state = state_to_features(self, game_state)
+    else:
+        self.old_state = self.new_state
 
-    :param self: The same object that is passed to all of your callbacks.
-    :param game_state: The dictionary that describes everything on the board.
-    :return: The action to take as a string.
-    """
-    # todo Exploration vs exploitation
-    random_prob = .1
-    if self.train and random.random() < random_prob:
+    # Exploration vs exploitation
+    if self.train and random.random() < self.exploration_rate:
         self.logger.debug("Choosing action purely at random.")
         # taking a random action for exploration
         return np.random.choice(ACTIONS)
 
     self.logger.debug("Querying model for action.")
-    # TODO: here I need to return and answer from the q-table
-    return np.random.choice(ACTIONS)
+    # Querying the Q-table for an action
+    print(np.argmax(self.Q_table[self.old_state]))
+    action = np.random.choice(ACTIONS)
+    # action = ACTIONS[np.argmax(self.Q_table[self.old_state])]
+    return action
 
 
 def state_to_features(self, game_state: dict) -> np.array:
-    """
-    *This is not a required function, but an idea to structure your code.*
-
-    Converts the game state to the input of your model, i.e.
-    a feature vector.
-
-    You can find out about the state of the game environment via game_state,
-    which is a dictionary. Consult 'get_state_for_agent' in environment.py to see
-    what it contains.
-
-    :param game_state:  A dictionary describing the current game board.
-    :return: np.array
-    """
     features = {}
 
+    # checking for obstacles
     obstacles = check_the_presence_of_obstacles(self, game_state)
 
     # feature one tells the location of the walls present near the agent
     features['obstacles'] = obstacles
-    # This is the dict before the game begins and after it ends
-    # if game_state is None:
-    #     return None
-    #
-    # # For example, you could construct several channels of equal shape, ...
-    # channels = []
-    # channels.append(...)
-    # # concatenate them as a feature tensor (they must have the same shape), ...
-    # stacked_channels = np.stack(channels)
-    # # and return them as a vector
-    # return stacked_channels.reshape(-1)
-    return features
+
+    # converting the features into a more indexable format for easy access in q-table
+    obstacle_state = ''.join(sorted([list(obstacle.keys())[0] for obstacle in obstacles])) or "NO_OBSTACLE"
+
+    return obstacle_state
+
+
+def load_q_table(self, q_table_folder):
+    try:
+        file = os.listdir(q_table_folder)
+
+        # getting file path
+        q_table_file = q_table_folder + file[0]
+        q_table = np.load(q_table_file)
+        self.logger.info("Loading Q-table from saved state.")
+        return q_table
+    except FileNotFoundError:
+        self.logger.info("No Q-table found")
+        return None
 
 
 def check_the_presence_of_obstacles(self, game_state: dict) -> np.array:
@@ -89,13 +81,13 @@ def check_the_presence_of_obstacles(self, game_state: dict) -> np.array:
     obstacle = []
     wall_presence = {}
 
-    if arena[coord_x+1][coord_y] == 1 or (coord_x+1, coord_y) == -1:
-        obstacle.append({'WALL_RIGHT': WALL_RIGHT}) # this will add Right wall presence in the list
-    elif arena[coord_x-1][coord_y] == 1 or (coord_x-1, coord_y) == -1:
+    if arena[coord_x + 1][coord_y] == 1 or (coord_x + 1, coord_y) == -1:
+        obstacle.append({'WALL_RIGHT': WALL_RIGHT})  # this will add Right wall presence in the list
+    elif arena[coord_x - 1][coord_y] == 1 or (coord_x - 1, coord_y) == -1:
         obstacle.append({'WALL_LEFT': WALL_LEFT})
-    elif arena[coord_x][coord_y+1] == 1 or (coord_x, coord_y+1) == -1:
+    elif arena[coord_x][coord_y + 1] == 1 or (coord_x, coord_y + 1) == -1:
         obstacle.append({'WALL_UP': WALL_UP})
-    elif arena[coord_x][coord_y-1] == 1 or (coord_x, coord_y-1) == -1:
+    elif arena[coord_x][coord_y - 1] == 1 or (coord_x, coord_y - 1) == -1:
         obstacle.append({'WALL_DOWN': WALL_DOWN})
 
     return obstacle

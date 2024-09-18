@@ -1,6 +1,10 @@
 # This file will contain the code for the helper functions and definitions
 # needed in the code calculations or global definitions
 
+
+# Actions
+ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
+
 # Events for Wall encounter
 WALL_AVOIDED = 'WALL_AVOIDED'
 WALL_HIT = 'WALL_HIT'
