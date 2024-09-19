@@ -5,8 +5,8 @@ from fallbacks import pygame
 
 # Game properties
 # board size (a smaller board may be useful at the beginning)
-COLS = 24 # FIXME: The initial field parameter is 17 * 17
-ROWS = 24
+COLS = 17 # FIXME: The initial field parameter is 17 * 17
+ROWS = 17
 SCENARIOS = {
     # modes useful for agent development
 	"empty": {

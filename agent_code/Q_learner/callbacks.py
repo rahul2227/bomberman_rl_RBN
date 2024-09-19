@@ -52,11 +52,14 @@ def state_to_features(self, game_state: dict) -> np.array:
     # checking for obstacles
     # this returns a list of walls in the agent's vicinity
     obstacles = check_the_presence_of_walls(self, game_state)
-    for obstacle in obstacles:
-        if obstacle in ACTIONS:
-            features[obstacle] = 'OBSTACLE'
-        else:
-            features[obstacle] = f'MOVE_{obstacle}'
+    for direction in obstacles:
+        if direction in ACTIONS:
+            features[direction] = 'OBSTACLE'
+
+    # for the remaining direction
+    directions = find_missing_directions(self, obstacles)
+    for direction in directions:
+        features[direction] = f'MOVE_{direction}'
     # num_of_coins = check_for_coin_presence(self, game_state)
 
     # converting the features into a more indexable format for easy access in q-table
@@ -67,12 +70,27 @@ def state_to_features(self, game_state: dict) -> np.array:
     # features['WALL_PRESENCE'] = obstacles
     # feature for coins
     # features['coins'] = num_of_coins
+    features = dict(sorted(features.items()))
+    self.logger.debug(f"features - 73: {features}")
+
+    self.logger.debug(f"self_valid_actions_list: {self.valid_actions_list}")
 
     for i, action in enumerate(self.valid_actions_list):
         if action == features:
+            self.logger.info(f"Action {i}: {action}")
             return i
 
     # return int(obstacle_state)
+
+
+def find_missing_directions(self, directions) -> np.array:
+    # directions = ['UP', 'DOWN', 'LEFT', 'RIGHT']
+    direction_set = set(directions)
+    action_set = set(ACTIONS)
+
+    # Find the difference between the two sets, and remove 'WAIT' if present
+    missing_direction = list(action_set - direction_set)
+    return [dir for dir in missing_direction if dir != 'WAIT' and dir != 'NO_OBSTACLE']
 
 
 def load_q_table(self, q_table_folder):
@@ -95,16 +113,17 @@ def check_the_presence_of_walls(self, game_state: dict) -> np.array:
     coord_x, coord_y = current_position
     obstacle = []
 
-    if (coord_x + 1, coord_y) == -1:
-        obstacle.append(action_index['RIGHT'])
-    elif (coord_x - 1, coord_y) == -1:
-        obstacle.append(action_index['LEFT'])
-    elif (coord_x, coord_y + 1) == -1:
-        obstacle.append(action_index['UP'])
-    elif (coord_x, coord_y - 1) == -1:
-        obstacle.append(action_index['DOWN'])
+    vicinity_coordinates = []
+    if arena[coord_x][coord_y + 1] == -1:
+        obstacle.append('UP')
+    if arena[coord_x][coord_y - 1] == -1:
+        obstacle.append('DOWN')
+    if arena[coord_x - 1][coord_y] == -1:
+        obstacle.append('LEFT')
+    if arena[coord_x + 1][coord_y] == -1:
+        obstacle.append('RIGHT')
     else:
-        obstacle.append(action_index['NO_OBSTACLE'])
+        obstacle.append('NO_OBSTACLE')
 
     return obstacle
 

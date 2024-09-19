@@ -49,7 +49,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
     self.logger.debug(f'old_state_int: {old_state_int}, new_state_int: {new_state_int}')
     old_state = self.old_state
-    new_state = self.new_state = state_to_features(self, new_game_state)
+    new_state = self.new_state = state_to_features(self, new_game_state) # this is the new_state init
 
     self.logger.debug(f'old_state: {old_state}, new_state: {new_state}')
 
@@ -61,7 +61,11 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
         self.Q_table[new_state_int] = np.zeros(len(ACTIONS))
 
     # Mapping Action to index
-    action_index = ACTIONS.index(self_action)
+    # action_index = ACTIONS.index(self_action)
+    if self_action in ACTIONS:
+        action_index = ACTIONS.index(self_action)
+    else:
+        self.logger.dbeug(f"Invalid action: {self_action}")
 
     self.logger.debug(f'action_index: {action_index}')
 
