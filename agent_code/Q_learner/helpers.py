@@ -1,26 +1,60 @@
 # This file will contain the code for the helper functions and definitions
 # needed in the code calculations or global definitions
+import itertools
 
+import numpy as np
 
 # Actions
-ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
+ACTIONS_ALL = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
+ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT']
 
-# Events for Wall encounter
-WALL_AVOIDED = 'WALL_AVOIDED'
-WALL_HIT = 'WALL_HIT'
-# Events for Wall presence
-WALL_UP = 'WALL_UP'
-WALL_DOWN = 'WALL_DOWN'
-WALL_LEFT = 'WALL_LEFT'
-WALL_RIGHT = 'WALL_RIGHT'
+# MAKING GENERALIZED EVENTS FOR DIRECTIONS
+UP = 'UP'
+DOWN = 'DOWN'
+LEFT = 'LEFT'
+RIGHT = 'RIGHT'
+
+# HIT DIRECTION STATE FOR OBSTACLE
 NO_OBSTACLE = 'NO_OBSTACLE'
+
+# COIN EVENT
+COIN_COLLECTED = 'COIN_COLLECTED'
+COIN_MISSED = 'COIN_MISSED'
+
+# EVENT FOR OBSTACLE HIT OR NOT
 OBSTACLE_HIT = 'OBSTACLE_HIT'
 OBSTACLE_AVOID = 'OBSTACLE_AVOID'
 
-wall_action_index = {
-    WALL_UP: 0,
-    WALL_DOWN: 1,
-    WALL_LEFT: 2,
-    WALL_RIGHT: 3,
+# This is a state index
+action_index = {
+    UP: 0,
+    DOWN: 1,
+    LEFT: 2,
+    RIGHT: 3,
     NO_OBSTACLE: 4,
+    COIN_COLLECTED: 5,
+    COIN_MISSED: 7
 }
+
+
+def valid_action() -> np.array:
+    features = []
+
+    valid_states = list(itertools.product(
+        ['MOVE_UP', 'OBSTACLE'],
+        ['MOVE_DOWN', 'OBSTACLE'],
+        ['MOVE_LEFT', 'OBSTACLE'],
+        ['MOVE_RIGHT', 'OBSTACLE'],
+    ))
+
+    # This will create every possible combination of the states for the features
+    for state in valid_states:
+        feature = {
+            'UP': state[0],
+            'DOWN': state[1],
+            'LEFT': state[2],
+            'RIGHT': state[3],
+        }
+        features.append(feature)
+
+    return features
