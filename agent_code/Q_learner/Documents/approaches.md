@@ -33,3 +33,7 @@ and when I found the fist coin I break the coin finding loop as that will give m
 Once I have the coin location I calculate the nearest path to the coin and get the most immediate action that our agent
 should take to get the coin and then reward the agent based on that. Also, In case I find no coin near the agent, for now
 I just take a random action.
+
+#### path to nearest coin
+There are multiple algorithms that can be used to find a path to the nearest element, but for the ease of use and simplicity,
+I will be implementing Bi-directional BFS to find the path between agent and coin which will also reduce the search space.

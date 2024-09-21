@@ -19,6 +19,8 @@ NO_OBSTACLE = 'NO_OBSTACLE'
 
 # COIN EVENT
 COIN_COLLECTED = 'COIN_COLLECTED'
+MOVED_TO_COIN = 'MOVED_TO_COIN'
+MOVED_AWAY_COIN = 'MOVED_AWAY_COIN'
 COIN_MISSED = 'COIN_MISSED'
 
 # EVENT FOR OBSTACLE HIT OR NOT
@@ -45,7 +47,7 @@ def valid_action() -> np.array:
         ['MOVE_DOWN', 'OBSTACLE'],
         ['MOVE_LEFT', 'OBSTACLE'],
         ['MOVE_RIGHT', 'OBSTACLE'],
-        ['COIN_UP', 'COIN_DOWN', 'COIN_LEFT', 'COIN_RIGHT']  # This is the state to coin direction
+        ['COIN_UP', 'COIN_DOWN', 'COIN_LEFT', 'COIN_RIGHT', 'NO_COIN']  # This is the state to coin direction
     ))
 
     # This will create every possible combination of the states for the features

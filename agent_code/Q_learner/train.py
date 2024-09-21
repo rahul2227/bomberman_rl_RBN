@@ -8,7 +8,7 @@ import numpy as np
 
 import events as e
 from .callbacks import state_to_features
-from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID, ACTIONS
+from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID, ACTIONS, MOVED_AWAY_COIN, MOVED_TO_COIN
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -30,6 +30,12 @@ def setup_training(self):
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
 
+    # updating states for the custom events and it works because old_state is being updated in act function
+    old_state = self.old_state  # this is the index list from the last state
+    new_state = state_to_features(self, new_game_state)  # this is the index list of the new state
+    previous_actions = self.valid_actions_list[old_state]
+    self.logger.debug(f'old_state: {old_state}, new_state: {new_state}')
+
     # Getting the agent position from the last step and current step
     old_agent_position = old_game_state['self'][-1]
     new_agent_position = new_game_state['self'][-1]
@@ -44,21 +50,23 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
         events.append(OBSTACLE_AVOID)
 
     # getting the state from the state_to_feature for old and new state
-    old_state_int = state_to_features(self, old_game_state)
-    new_state_int = state_to_features(self, new_game_state)
+    # old_state_int = state_to_features(self, old_game_state)
+    # new_state_int = state_to_features(self, new_game_state)
+    # replacing because old_state_int == old_state and new_state_int == new_state
 
-    self.logger.debug(f'old_state_int: {old_state_int}, new_state_int: {new_state_int}')
-    old_state = self.old_state
-    new_state = self.new_state = state_to_features(self, new_game_state) # this is the new_state init
+    # Append event for reward if the agent chose a direction from the current coin direction
+    # If moved towards coin then MOVED_TO_COIN else MOVED_AWAY_COIN
 
-    self.logger.debug(f'old_state: {old_state}, new_state: {new_state}')
-
+    if previous_actions['COIN_DIRECTION'] == self_action:
+        events.append(MOVED_TO_COIN)
+    else:
+        events.append(MOVED_AWAY_COIN)
 
     # Initializing q-table entry
-    if old_state_int not in self.Q_table:
-        self.Q_table[old_state_int] = np.zeros(len(ACTIONS))
-    if new_state_int not in self.Q_table:
-        self.Q_table[new_state_int] = np.zeros(len(ACTIONS))
+    if old_state not in self.Q_table:
+        self.Q_table[old_state] = np.zeros(len(ACTIONS))
+    if new_state not in self.Q_table:
+        self.Q_table[new_state] = np.zeros(len(ACTIONS))
 
     # Mapping Action to index
     # action_index = ACTIONS.index(self_action)
@@ -73,16 +81,17 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     reward = reward_from_events(self, events)
 
     # Q-value update
-    old_q_value = self.Q_table[old_state_int][action_index]
-    future_optimal = np.argmax(self.Q_table[new_state_int])
+    old_q_value = self.Q_table[old_state][action_index]
+    future_optimal = np.argmax(self.Q_table[new_state])
 
     self.logger.debug(f'future_optimal: {future_optimal}, old_q_value: {old_q_value}')
 
     # update Q-value
-    self.Q_table[new_state_int][action_index] = old_q_value + self.learning_rate * (reward + self.discount_rate * future_optimal - old_q_value)
+    self.Q_table[new_state][action_index] = old_q_value + self.learning_rate * (
+                reward + self.discount_rate * future_optimal - old_q_value)
 
     # saving current state
-    self.old_state = new_state_int
+    self.old_state = new_state
 
     # transition logging
     self.transitions.append(
@@ -145,7 +154,9 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 1,
+        e.COIN_COLLECTED: 10,
+        MOVED_TO_COIN: 7,
+        MOVED_AWAY_COIN: -8,
         e.KILLED_OPPONENT: 5,
         OBSTACLE_HIT: -0.5,
         OBSTACLE_AVOID: 1,

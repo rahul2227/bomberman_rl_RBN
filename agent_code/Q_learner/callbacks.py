@@ -1,6 +1,7 @@
 import os
 import pickle
 import random
+from collections import deque
 
 import numpy as np
 
@@ -60,10 +61,11 @@ def state_to_features(self, game_state: dict) -> np.array:
     directions = find_missing_directions(self, obstacles)
     for direction in directions:
         features[direction] = f'MOVE_{direction}'
+
     coins_present, nearest_coin = check_for_coin_presence(self, game_state)
 
-    if coins_present and nearest_coin:
-        nearest_coin_path = calculate_path_to_nearest_coin(self, game_state, nearest_coin)
+    nearest_coin_path = calculate_path_to_nearest_coin(self, game_state, nearest_coin)
+    features['COIN_DIRECTION'] = nearest_coin_path
 
     features = dict(sorted(features.items()))
     self.logger.debug(f"features - 73: {features}")
@@ -155,3 +157,102 @@ def check_for_coin_presence(self, game_state: dict, near_tiles=5) -> (int, list)
     return num_of_coins_on_field, nearest_coin
 
 
+def calculate_path_to_nearest_coin(self, game_state, nearest_coin):
+    # The agent's current position
+    agent_start = tuple(game_state['self'][-1])
+
+    # If there's no coin, return NO_COIN
+    if not nearest_coin:
+        return 'NO_COIN'
+
+    # Bi-directional BFS
+    path = bidirectional_bfs(agent_start, tuple(nearest_coin[0]), game_state)
+
+    # in case of no valid path or we are at coin location
+    if not path or len(path) < 2:
+        return 'NO_COIN'
+
+    # Next step is the first step after current position
+    next_step = path[1]
+
+    x_start, y_start = agent_start
+    x_next, y_next = next_step
+
+    # Determine the direction to move
+    if x_next == x_start and y_next == y_start - 1:
+        return 'COIN_UP'
+    elif x_next == x_start and y_next == y_start + 1:
+        return 'COIN_DOWN'
+    elif x_next == x_start - 1 and y_next == y_start:
+        return 'COIN_LEFT'
+    elif x_next == x_start + 1 and y_next == y_start:
+        return 'COIN_RIGHT'
+
+    return 'NO_COIN'  # Default in case something went wrong
+
+
+# MARK: BI-Directional BFS implementation
+
+def get_neighbors(position, field):
+    x, y = position
+    neighbors = []
+
+    # Check the possible moves (UP, DOWN, LEFT, RIGHT)
+    possible_moves = [(x, y - 1), (x, y + 1), (x - 1, y), (x + 1, y)]
+
+    # Only allow valid moves (within bounds and free tiles)
+    for nx, ny in possible_moves:
+        if 0 <= nx < field.shape[0] and 0 <= ny < field.shape[1] and field[nx, ny] == 0:
+            neighbors.append((nx, ny))
+
+    return neighbors
+
+
+def merge_paths(meeting_node, visited_start, visited_target):
+    path_start = []
+    path_target = []
+
+    # Build path from start to meeting point
+    node = meeting_node
+    while node:
+        path_start.append(node)
+        node = visited_start[node]
+
+    # Build path from target (coin) to meeting point
+    node = visited_target[meeting_node]
+    while node:
+        path_target.append(node)
+        node = visited_target[node]
+
+    # Combine the paths
+    return path_start[::-1] + path_target
+
+
+# Bidirectional BFS search
+def bidirectional_bfs(start, target, game_state):
+    queue_start = deque([start])
+    queue_target = deque([target])
+    visited_start = {start: None}
+    visited_target = {target: None}
+
+    while queue_start and queue_target:
+        if queue_start:
+            node = queue_start.popleft()
+            if node in visited_target:
+                return merge_paths(node, visited_start, visited_target)  # Join the two paths
+
+            for neighbor in get_neighbors(node, game_state['field']):
+                if neighbor not in visited_start:
+                    queue_start.append(neighbor)
+                    visited_start[neighbor] = node
+
+        if queue_target:
+            node = queue_target.popleft()
+            if node in visited_start:
+                return merge_paths(node, visited_start, visited_target)
+
+            for neighbor in get_neighbors(node, game_state['field']):
+                if neighbor not in visited_target:
+                    queue_target.append(neighbor)
+                    visited_target[neighbor] = node
+    return None
