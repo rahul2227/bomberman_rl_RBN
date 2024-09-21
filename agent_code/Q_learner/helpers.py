@@ -45,6 +45,7 @@ def valid_action() -> np.array:
         ['MOVE_DOWN', 'OBSTACLE'],
         ['MOVE_LEFT', 'OBSTACLE'],
         ['MOVE_RIGHT', 'OBSTACLE'],
+        ['COIN_UP', 'COIN_DOWN', 'COIN_LEFT', 'COIN_RIGHT']  # This is the state to coin direction
     ))
 
     # This will create every possible combination of the states for the features
@@ -54,6 +55,7 @@ def valid_action() -> np.array:
             'DOWN': state[1],
             'LEFT': state[2],
             'RIGHT': state[3],
+            'COIN_DIRECTION': state[4],
         }
         features.append(feature)
 

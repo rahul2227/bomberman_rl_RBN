@@ -24,3 +24,12 @@ possible combinations of the states.
 
 The addition here is that to increase the number of states, I will be adding a all direction move, so that our agent
 knows that upon moving to that direction it will get rewarded.
+
+### Approach for finding coins
+The idea is to find a coin that is near to the agent and then steer the agent towards it. I see if there are any coins
+near the agent within the radius of 5 tiles(if the game is 17*17, it is increased while training if the field is larger)
+and when I found the fist coin I break the coin finding loop as that will give me only the coin nearest to the agent.
+
+Once I have the coin location I calculate the nearest path to the coin and get the most immediate action that our agent
+should take to get the coin and then reward the agent based on that. Also, In case I find no coin near the agent, for now
+I just take a random action.

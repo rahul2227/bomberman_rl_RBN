@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# adding q-tables
+agent_code/Q_learner/old_q_tables
+agent_code/Q_learner/q_tables
+
 # Distribution / packaging
 .Python
 build/

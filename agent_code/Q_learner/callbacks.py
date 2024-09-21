@@ -60,16 +60,11 @@ def state_to_features(self, game_state: dict) -> np.array:
     directions = find_missing_directions(self, obstacles)
     for direction in directions:
         features[direction] = f'MOVE_{direction}'
-    # num_of_coins = check_for_coin_presence(self, game_state)
+    coins_present, nearest_coin = check_for_coin_presence(self, game_state)
 
-    # converting the features into a more indexable format for easy access in q-table
-    # obstacle_state = ''.join([str(obstacle) for obstacle in obstacles])
+    if coins_present and nearest_coin:
+        nearest_coin_path = calculate_path_to_nearest_coin(self, game_state, nearest_coin)
 
-    # feature one tells the location of the walls present near the agent
-    # features['obstacles'] = int(obstacle_state)
-    # features['WALL_PRESENCE'] = obstacles
-    # feature for coins
-    # features['coins'] = num_of_coins
     features = dict(sorted(features.items()))
     self.logger.debug(f"features - 73: {features}")
 
@@ -128,15 +123,35 @@ def check_the_presence_of_walls(self, game_state: dict) -> np.array:
     return obstacle
 
 
-def check_for_coin_presence(self, game_state: dict) -> int:
+def check_for_coin_presence(self, game_state: dict, near_tiles=5) -> (int, list):
     """
-    This function checks if the coin is present on the field or not.
+    This function checks if the coin is present on the field within a certain radius or not.
     Args:
         self: the game state holder
         game_state: state of the current round of the game
+        near_tiles: the near tiles of the current player to check for presence
 
     Returns: returns an integer containing the coin present on the field.
 
     """
-    num_of_coins = len(game_state['coins'])
-    return num_of_coins
+    num_of_coins_on_field = len(game_state['coins'])
+    coins_list = game_state['coins']
+    agent_x, agent_y = game_state['self'][-1]
+    nearest_coin = []
+    for tile in range(1, near_tiles + 1):
+        if (agent_x + tile, agent_y) in coins_list:
+            nearest_coin.append((agent_x + tile, agent_y))
+            break
+        if (agent_x, agent_y + tile) in coins_list:
+            nearest_coin.append((agent_x, agent_y + tile))
+            break
+        if (agent_x - tile, agent_y) in coins_list:
+            nearest_coin.append((agent_x - tile, agent_y))
+            break
+        if (agent_x, agent_y - tile) in coins_list:
+            nearest_coin.append((agent_x, agent_y - tile))
+            break
+    self.logger.debug(f'This is the nearest coin: {nearest_coin}')
+    return num_of_coins_on_field, nearest_coin
+
+
