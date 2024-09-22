@@ -278,3 +278,21 @@ def bidirectional_bfs(start, target, game_state):
                     queue_target.append(neighbor)
                     visited_target[neighbor] = node
     return None
+
+
+# MARK: Explosion escape feature
+# This function calculates safe and dangerous tiles for our agent
+def calculate_safe_and_dangerous_tiles(explosion_map: np.array):
+    # Initialize lists for safe and dangerous tiles
+    safe_tiles = []
+    dangerous_tiles = []
+
+    # Iterate over the explosion map
+    for x in range(explosion_map.shape[0]):
+        for y in range(explosion_map.shape[1]):
+            if explosion_map[x, y] == 0:
+                safe_tiles.append((x, y))
+            else:
+                dangerous_tiles.append((x, y))
+
+    return safe_tiles, dangerous_tiles

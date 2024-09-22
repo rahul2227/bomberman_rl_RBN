@@ -171,14 +171,14 @@ def reward_from_events(self, events: List[str]) -> int:
     game_rewards = {  # making the negatives to zero
         e.COIN_COLLECTED: 20,
         MOVED_TO_COIN: 30,
-        MOVED_AWAY_COIN: 0,  # before -12
-        OBSTACLE_HIT: 0,  # TODO: award this also when the agent has hit another agent  # -15
-        OBSTACLE_AVOID: 20,
+        MOVED_AWAY_COIN: -25,  # before -12
+        OBSTACLE_HIT: -20,  # TODO: award this also when the agent has hit another agent  # -15
+        OBSTACLE_AVOID: 25,
         e.KILLED_SELF: -50,
         e.BOMB_DROPPED: 0,
-        e.WAITED: 0,  # -25
-        GOOD_MOVE: 18,
-        BAD_MOVE: 0,  # -13
+        e.WAITED: -25,  # -25
+        GOOD_MOVE: 30,
+        BAD_MOVE: -25,  # -13
     }
     reward_sum = 0
     for event in events:
