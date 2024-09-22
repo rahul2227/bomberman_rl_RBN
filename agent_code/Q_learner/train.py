@@ -8,7 +8,7 @@ import numpy as np
 
 import events as e
 from .callbacks import state_to_features
-from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID, ACTIONS, MOVED_AWAY_COIN, MOVED_TO_COIN
+from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID, ACTIONS, MOVED_AWAY_COIN, MOVED_TO_COIN, GOOD_MOVE, BAD_MOVE
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -30,17 +30,17 @@ def setup_training(self):
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
 
-    # updating states for the custom events and it works because old_state is being updated in act function
+    # updating states for the custom events, and it works because old_state is being updated in act function
     old_state = self.old_state  # this is the index list from the last state
     new_state = state_to_features(self, new_game_state)  # this is the index list of the new state
     previous_actions = self.valid_actions_list[old_state]
-    self.logger.debug(f'old_state: {old_state}, new_state: {new_state}')
+    # self.logger.debug(f'old_state: {old_state}, new_state: {new_state}')
 
     # Getting the agent position from the last step and current step
     old_agent_position = old_game_state['self'][-1]
     new_agent_position = new_game_state['self'][-1]
 
-    self.logger.debug(f'old_agent_position: {old_agent_position}, new_agent_position: {new_agent_position}')
+    # self.logger.debug(f'old_agent_position: {old_agent_position}, new_agent_position: {new_agent_position}')
 
     # Idea is to check if the agent has hit the wall by checking
     # if the agent is at the same location after the change happened
@@ -49,6 +49,14 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     else:
         events.append(OBSTACLE_AVOID)
 
+    # IDEA: generalized penalisation for making a wrong move if the action taken by the agent is not a good action
+    # IDEA: according to the previous actions list
+    # IDEA: Handle the WAIT action for the good or bad action
+    if self_action == 'WAIT' or f'COIN_{self_action}' != previous_actions['COIN_DIRECTION'] or 'OBSTACLE' == \
+            previous_actions[self_action]:
+        events.append(BAD_MOVE)
+    else:
+        events.append(GOOD_MOVE)
     # getting the state from the state_to_feature for old and new state
     # old_state_int = state_to_features(self, old_game_state)
     # new_state_int = state_to_features(self, new_game_state)
@@ -56,8 +64,11 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
     # Append event for reward if the agent chose a direction from the current coin direction
     # If moved towards coin then MOVED_TO_COIN else MOVED_AWAY_COIN
-
+    self.logger.debug(f'previous_actions[COIN_DIRECTION]: {previous_actions['COIN_DIRECTION']}')
+    self.logger.debug(f'Action taken: {self_action}')
     if previous_actions['COIN_DIRECTION'] == self_action:
+        self.logger.debug(f'This is the COIN_DIRECTION FROM FEATURES: {previous_actions["COIN_DIRECTION"]}')
+        self.logger.debug(f'Action taken: {self_action}')
         events.append(MOVED_TO_COIN)
     else:
         events.append(MOVED_AWAY_COIN)
@@ -84,11 +95,11 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     old_q_value = self.Q_table[old_state][action_index]
     future_optimal = np.argmax(self.Q_table[new_state])
 
-    self.logger.debug(f'future_optimal: {future_optimal}, old_q_value: {old_q_value}')
+    # self.logger.debug(f'future_optimal: {future_optimal}, old_q_value: {old_q_value}')
 
     # update Q-value
     self.Q_table[new_state][action_index] = old_q_value + self.learning_rate * (
-                reward + self.discount_rate * future_optimal - old_q_value)
+            reward + self.discount_rate * future_optimal - old_q_value)
 
     # saving current state
     self.old_state = new_state
@@ -139,7 +150,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
         self.Q_table = previous_q_table
 
     np.save(q_table_file_path, self.Q_table)
-    self.logger.info(f"Q-table saved to {q_table_file_path}")
+    self.logger.debug(f"Q-table empty states: {np.sum(np.all(self.Q_table == 0, axis=1))}")
 
     # transition log
     self.transitions.append(
@@ -150,19 +161,21 @@ def reward_from_events(self, events: List[str]) -> int:
     """
     *This is not a required function, but an idea to structure your code.*
 
-    Here you can modify the rewards your agent get so as to en/discourage
+    Here you can modify the rewards your agent get, to en/discourage a
     certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 10,
-        MOVED_TO_COIN: 7,
-        MOVED_AWAY_COIN: -8,
+        e.COIN_COLLECTED: 20,
+        MOVED_TO_COIN: 16,
+        MOVED_AWAY_COIN: -12,
         e.KILLED_OPPONENT: 5,
-        OBSTACLE_HIT: -0.5,
-        OBSTACLE_AVOID: 1,
-        e.KILLED_SELF: -0.5,
+        OBSTACLE_HIT: -15,  # TODO: award this also when the agent has hit another agent
+        OBSTACLE_AVOID: 20,
+        e.KILLED_SELF: -50,
         e.BOMB_DROPPED: 0,
-        e.WAITED: -0.25,
+        e.WAITED: -25,
+        GOOD_MOVE: 18,
+        BAD_MOVE: -13,
     }
     reward_sum = 0
     for event in events:

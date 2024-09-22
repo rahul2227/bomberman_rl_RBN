@@ -37,3 +37,6 @@ I just take a random action.
 #### path to nearest coin
 There are multiple algorithms that can be used to find a path to the nearest element, but for the ease of use and simplicity,
 I will be implementing Bi-directional BFS to find the path between agent and coin which will also reduce the search space.
+
+The problem with this strategy was that the Q-table was excelling in a negative reward systems so reward tuning and additional
+events is necessary.

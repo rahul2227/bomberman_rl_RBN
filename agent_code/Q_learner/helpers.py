@@ -27,6 +27,10 @@ COIN_MISSED = 'COIN_MISSED'
 OBSTACLE_HIT = 'OBSTACLE_HIT'
 OBSTACLE_AVOID = 'OBSTACLE_AVOID'
 
+# Good Move or Bad Move
+GOOD_MOVE = 'GOOD_MOVE'
+BAD_MOVE = 'BAD_MOVE'
+
 # This is a state index
 action_index = {
     UP: 0,

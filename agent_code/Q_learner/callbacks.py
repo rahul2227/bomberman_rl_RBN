@@ -1,11 +1,10 @@
 import os
-import pickle
 import random
 from collections import deque
 
 import numpy as np
 
-from agent_code.Q_learner.helpers import ACTIONS, action_index, valid_action
+from agent_code.Q_learner.helpers import ACTIONS, valid_action
 
 
 def setup(self):
@@ -17,7 +16,7 @@ def setup(self):
         self.logger.info("Q-learning agent from scratch")
         self.number_of_actions = len(self.valid_actions_list)
         self.Q_table = np.zeros(shape=(self.number_of_actions, len(ACTIONS)))  # currently 4 * 6
-        self.logger.info(f"Initialized Q-table = {self.Q_table}")
+        # self.logger.info(f"Initialized Q-table = {self.Q_table}")
         # weights = np.random.rand(len(ACTIONS))
         # self.model = weights / weights.sum()
         self.exploration_rate = 0.8  # random choice
@@ -68,13 +67,13 @@ def state_to_features(self, game_state: dict) -> np.array:
     features['COIN_DIRECTION'] = nearest_coin_path
 
     features = dict(sorted(features.items()))
-    self.logger.debug(f"features - 73: {features}")
+    # self.logger.debug(f"features - 73: {features}")
 
-    self.logger.debug(f"self_valid_actions_list: {self.valid_actions_list}")
+    # self.logger.debug(f"self_valid_actions_list: {self.valid_actions_list}")
 
     for i, action in enumerate(self.valid_actions_list):
         if action == features:
-            self.logger.info(f"Action {i}: {action}")
+            self.logger.info(f"Action from state_to_feature = {i}: {action}")
             return i
 
     # return int(obstacle_state)
@@ -95,9 +94,10 @@ def load_q_table(self, q_table_folder):
         file = os.listdir(q_table_folder)
 
         # getting file path
-        q_table_file = q_table_folder + file[0]
+        q_table_file = q_table_folder + file[1]
+        # self.logger.info(f"Loading Q-table from {q_table_file}")
         q_table = np.load(q_table_file)
-        self.logger.info("Loading Q-table from saved state.")
+        # self.logger.info("Loading Q-table from saved state.")
         return q_table
     except FileNotFoundError:
         self.logger.info("No Q-table found")
@@ -202,7 +202,7 @@ def get_neighbors(position, field):
 
     # Only allow valid moves (within bounds and free tiles)
     for nx, ny in possible_moves:
-        if 0 <= nx < field.shape[0] and 0 <= ny < field.shape[1] and field[nx, ny] == 0:
+        if field.shape[0] > nx >= 0 == field[nx, ny] and 0 <= ny < field.shape[1]:
             neighbors.append((nx, ny))
 
     return neighbors

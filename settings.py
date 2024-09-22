@@ -5,22 +5,22 @@ from fallbacks import pygame
 
 # Game properties
 # board size (a smaller board may be useful at the beginning)
-COLS = 17 # FIXME: The initial field parameter is 17 * 17
+COLS = 17  # FIXME: The initial field parameter is 17 * 17
 ROWS = 17
 SCENARIOS = {
     # modes useful for agent development
-	"empty": {
-        "CRATE_DENSITY": 0, 
-        "COIN_COUNT": 0 
+    "empty": {
+        "CRATE_DENSITY": 0,
+        "COIN_COUNT": 0
     },
     "coin-heaven": {
         "CRATE_DENSITY": 0,
         "COIN_COUNT": 50
     },
-    "loot-crate": { 
-        "CRATE_DENSITY": 0.75, 
-        "COIN_COUNT": 50 
-    }, 
+    "loot-crate": {
+        "CRATE_DENSITY": 0.75,
+        "COIN_COUNT": 50
+    },
     # this is the tournament game mode
     "classic": {
         "CRATE_DENSITY": 0.75,
