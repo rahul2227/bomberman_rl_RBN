@@ -39,4 +39,13 @@ There are multiple algorithms that can be used to find a path to the nearest ele
 I will be implementing Bi-directional BFS to find the path between agent and coin which will also reduce the search space.
 
 The problem with this strategy was that the Q-table was excelling in a negative reward systems so reward tuning and additional
-events is necessary.
+events is necessary. This was done using the Events: ['GOOD_MOVE', 'BAD_MOVE'].
+
+Also reward tuning was done to exclude negative rewards and give only 0 in place of them to teach the agent to maximize the
+positive values.
+
+
+### Escape Bomb Feature
+This feature is implemented for the agent to escape from the bomb in the vicinity. The idea is to get the explosion map and 
+coordinates of the bomb and mark all the exploded tiles as death tiles. The other tiles in this map will be safe tiles. Now 
+from reward tuning we will be teaching our agent to only be in safe tiles and not in the death tiles.

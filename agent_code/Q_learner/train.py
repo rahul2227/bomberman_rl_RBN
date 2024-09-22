@@ -52,7 +52,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     # IDEA: generalized penalisation for making a wrong move if the action taken by the agent is not a good action
     # IDEA: according to the previous actions list
     # IDEA: Handle the WAIT action for the good or bad action
-    if self_action == 'WAIT' or f'COIN_{self_action}' != previous_actions['COIN_DIRECTION'] or 'OBSTACLE' == \
+    if self_action == 'WAIT' or self_action != previous_actions['COIN_DIRECTION'] or 'OBSTACLE' == \
             previous_actions[self_action]:
         events.append(BAD_MOVE)
     else:
@@ -70,6 +70,8 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
         self.logger.debug(f'This is the COIN_DIRECTION FROM FEATURES: {previous_actions["COIN_DIRECTION"]}')
         self.logger.debug(f'Action taken: {self_action}')
         events.append(MOVED_TO_COIN)
+    elif previous_actions['COIN_DIRECTION'] == 'NO_COIN':
+        pass
     else:
         events.append(MOVED_AWAY_COIN)
 
@@ -151,6 +153,8 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     np.save(q_table_file_path, self.Q_table)
     self.logger.debug(f"Q-table empty states: {np.sum(np.all(self.Q_table == 0, axis=1))}")
+    self.logger.debug(f'Q-table: {self.Q_table}')
+    self.logger.debug(f'Game Field: {last_game_state['field']}')
 
     # transition log
     self.transitions.append(
@@ -164,18 +168,17 @@ def reward_from_events(self, events: List[str]) -> int:
     Here you can modify the rewards your agent get, to en/discourage a
     certain behavior.
     """
-    game_rewards = {
+    game_rewards = {  # making the negatives to zero
         e.COIN_COLLECTED: 20,
-        MOVED_TO_COIN: 16,
-        MOVED_AWAY_COIN: -12,
-        e.KILLED_OPPONENT: 5,
-        OBSTACLE_HIT: -15,  # TODO: award this also when the agent has hit another agent
+        MOVED_TO_COIN: 30,
+        MOVED_AWAY_COIN: 0,  # before -12
+        OBSTACLE_HIT: 0,  # TODO: award this also when the agent has hit another agent  # -15
         OBSTACLE_AVOID: 20,
         e.KILLED_SELF: -50,
         e.BOMB_DROPPED: 0,
-        e.WAITED: -25,
+        e.WAITED: 0,  # -25
         GOOD_MOVE: 18,
-        BAD_MOVE: -13,
+        BAD_MOVE: 0,  # -13
     }
     reward_sum = 0
     for event in events:

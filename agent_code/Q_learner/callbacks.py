@@ -63,11 +63,11 @@ def state_to_features(self, game_state: dict) -> np.array:
 
     coins_present, nearest_coin = check_for_coin_presence(self, game_state)
 
-    nearest_coin_path = calculate_path_to_nearest_coin(self, game_state, nearest_coin)
+    nearest_coin_path = calculate_path_to_nearest_coin(self, game_state, nearest_coin, features)
     features['COIN_DIRECTION'] = nearest_coin_path
 
     features = dict(sorted(features.items()))
-    # self.logger.debug(f"features - 73: {features}")
+    self.logger.debug(f"features - state_to_features: {features}")
 
     # self.logger.debug(f"self_valid_actions_list: {self.valid_actions_list}")
 
@@ -110,11 +110,11 @@ def check_the_presence_of_walls(self, game_state: dict) -> np.array:
     coord_x, coord_y = current_position
     obstacle = []
 
-    vicinity_coordinates = []
+    #  because the field in the coordinates is transposed
     if arena[coord_x][coord_y + 1] == -1:
-        obstacle.append('UP')
-    if arena[coord_x][coord_y - 1] == -1:
         obstacle.append('DOWN')
+    if arena[coord_x][coord_y - 1] == -1:
+        obstacle.append('UP')
     if arena[coord_x - 1][coord_y] == -1:
         obstacle.append('LEFT')
     if arena[coord_x + 1][coord_y] == -1:
@@ -157,7 +157,7 @@ def check_for_coin_presence(self, game_state: dict, near_tiles=5) -> (int, list)
     return num_of_coins_on_field, nearest_coin
 
 
-def calculate_path_to_nearest_coin(self, game_state, nearest_coin):
+def calculate_path_to_nearest_coin(self, game_state, nearest_coin, directions):
     # The agent's current position
     agent_start = tuple(game_state['self'][-1])
 
@@ -178,16 +178,38 @@ def calculate_path_to_nearest_coin(self, game_state, nearest_coin):
     x_start, y_start = agent_start
     x_next, y_next = next_step
 
+    # check for obstacle in coin path
+    obstacle = check_the_presence_of_walls(self, game_state)
+
     # Determine the direction to move
     if x_next == x_start and y_next == y_start - 1:
-        return 'COIN_UP'
+        if directions['UP'] != 'OBSTACLE':
+            return 'UP'
+        else:
+            return np.random.choice(['LEFT', 'RIGHT'])
+        # return 'COIN_UP'
     elif x_next == x_start and y_next == y_start + 1:
-        return 'COIN_DOWN'
+        # return 'COIN_DOWN'
+        if directions['DOWN'] != 'OBSTACLE':
+            return 'DOWN'
+        else:
+            return np.random.choice(['LEFT', 'RIGHT'])
     elif x_next == x_start - 1 and y_next == y_start:
-        return 'COIN_LEFT'
+        if directions['LEFT'] != 'OBSTACLE':
+            return 'LEFT'
+        else:
+            return np.random.choice(['UP', 'DOWN'])
+        # return 'COIN_LEFT'
     elif x_next == x_start + 1 and y_next == y_start:
-        return 'COIN_RIGHT'
-
+        if directions['RIGHT'] != 'OBSTACLE':
+            return 'RIGHT'
+        else:
+            return np.random.choice(['UP', 'DOWN'])
+        # return 'COIN_RIGHT'
+    # IDEA: return not the coin location but the direction I should take to reach that coin
+    # IDEA: if there is an obstacle in the path then return a random direction which is obstacle free
+    # IDEA: if the coin is present in vertical direction and an obstacle is there then return a random horizontal direction
+    # IDEA: and vice versa
     return 'NO_COIN'  # Default in case something went wrong
 
 
