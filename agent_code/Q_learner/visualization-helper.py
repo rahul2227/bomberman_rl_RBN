@@ -32,7 +32,7 @@ def visualize_q_table(q_table):
     plt.colorbar(label='Q-value')
     plt.xlabel('Actions')
     plt.ylabel('States')
-    plt.xticks(range(q_table.shape[1]), ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT'])  # , 'BOMB'
+    plt.xticks(range(q_table.shape[1]), ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB'])  # , 'BOMB'
     plt.title('Q-table Heatmap')
     plt.show()
 

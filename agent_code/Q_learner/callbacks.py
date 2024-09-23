@@ -104,18 +104,38 @@ def find_missing_directions(self, directions) -> np.array:
     return [dir for dir in missing_direction if dir != 'WAIT' and dir != 'NO_OBSTACLE' and dir != 'BOMB']
 
 
+# def load_q_table(self, q_table_folder):
+#     try:
+#         file = os.listdir(q_table_folder)
+#
+#         # getting file path
+#         q_table_file = q_table_folder + file[1]
+#         # self.logger.info(f"Loading Q-table from {q_table_file}")
+#         q_table = np.load(q_table_file)
+#         # self.logger.info("Loading Q-table from saved state.")
+#         return q_table
+#     except FileNotFoundError:
+#         self.logger.info("No Q-table found")
+#         return None
+
 def load_q_table(self, q_table_folder):
     try:
-        file = os.listdir(q_table_folder)
+        # List only .npy files in the folder
+        files = [f for f in os.listdir(q_table_folder) if f.endswith('.npy')]
 
-        # getting file path
-        q_table_file = q_table_folder + file[1]
+        if not files:
+            self.logger.info("No Q-table found in the folder")
+            return None
+
+        # getting file path (using the first .npy file found)
+        q_table_file = os.path.join(q_table_folder, files[0])
+
         # self.logger.info(f"Loading Q-table from {q_table_file}")
         q_table = np.load(q_table_file)
         # self.logger.info("Loading Q-table from saved state.")
         return q_table
     except FileNotFoundError:
-        self.logger.info("No Q-table found")
+        self.logger.info("Q-table folder not found")
         return None
 
 
@@ -154,23 +174,6 @@ def check_the_presence_of_crates(self, game_state: dict) -> np.array:
         crate = 'NO_CRATE'
 
     return crate
-
-
-# def check_the_presence_of_agents(self, game_state: dict) -> np.array:
-#     arena = game_state['field']
-#     current_position = game_state['self'][-1]
-#     coord_x, coord_y = current_position
-#     agent = ''
-#     all_agents = [agent for agent in game_state['others'][-1]]
-#
-#     #  because the field in the coordinates is transposed
-#     if arena[coord_x][coord_y + 1] in all_agents or arena[coord_x][coord_y - 1] in all_agents.any() or arena[coord_x - 1][
-#         coord_y] in all_agents.any() or arena[coord_x + 1][coord_y] in all_agents.any():
-#         agent = 'AGENT'
-#     else:
-#         agent = 'NO_AGENT'
-#
-#     return agent
 
 
 def check_the_presence_of_agents(self, game_state: dict) -> str:
