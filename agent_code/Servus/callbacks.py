@@ -1,90 +1,83 @@
-
-# Requires Keras, Tensorflow!
-
-# Numpy
+# Core dependencies for deep learning
 import numpy as np
-
-# Random
-import random as random
-
-# Deque for memory
-from collections import deque
-
-# Tensorflow
+import random 
+from collections import deque  # For storing experiences
 import tensorflow as tf
-
-# Keras
 import keras.backend as K
+import sparse
 
-from keras.models     import Sequential
-from keras.models     import Model
-from keras.models     import load_model
-
-from keras.layers     import Dense
-from keras.layers     import Input
-from keras.layers     import Conv2D
-from keras.layers     import Conv1D
-from keras.layers     import Lambda
-from keras.layers     import Flatten
-from keras.layers     import GaussianDropout
-from keras.layers     import Layer
-from keras.layers     import add
-from keras.layers     import Concatenate
-from keras.layers     import Average
-
+# Import Keras models and layers
+from keras.models import Sequential, Model, load_model
+from keras.layers import Dense, Input, Conv2D, Conv1D, Lambda, Flatten
+from keras.layers import GaussianDropout, Layer, add, Concatenate, Average
 from keras.optimizers import Adam
-
-from keras import activations
-from keras import initializers
-
+from keras import activations, initializers
 from keras.engine.base_layer import InputSpec
 
-# Import settings
-from settings import s
-from settings import e
+# Load custom configurations
+from settings import s, e
 
-# OS
+# Operating system interactions
 import os
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # To use the CPU instead of GPU
-
-#np.set_printoptions(threshold=np.nan) # If arrays should always be printed completely.
-
-# SumTree has nan if called for the first time, ignore warning!
+# Suppress NumPy warnings for initial SumTree calls
 np.seterr(invalid='ignore')
 
-""" Possible Improvements:
-    > Compare only part of the state to detect loops. Extend rhombus around visited agent positions?
-    > Add whose bomb it is to the game state!
+""" 
+Potential Enhancements:
+* Loop detection: Refine state comparison for loops, possibly by extending the check area.
+* Bomb ownership: Incorporate bomb ownership information into the game state.
 """
 
-""" How to use:
-    > There are still things missing here!
+""" 
+Usage Guide:
 
-    > Turn self.generate_random_data to True to generate random data that will fill up the memory before starting. Run once with True,
-      it will generate a file from it. Run with False afterwards, it will load from the file. Repeat this for new reward values and state versions.
-    > Turn self.learning_bool to True if you want to train a new network, to False if you want to load a trained model. They are automatically saved
-      in /model, model.h5 is always the newest version. Change self.load_model to load a different model (e.g. "modelN20").
-    > Set self.usePER to True for prioritized experience replay from a SumTree, to False for random sampling from a deque.
-    > There are different versions of create_state and build_model. The convolutional networks need stacks of pictures as input, the dense
-      networks need an array (the collapsed pictures). Be sure to change state_size accordingly. Change the used model and state in setup by assigning
-      self.model_version and self.state_version.
-    > For self.use_target True it will use a model and a target model that is only updated every once in a while, for False it will only use one model.
-    > Change self.action_size to 6 if all actions should be possible, to 5 if only BOMB should be excluded, to 4 for only walking. Change self.pactions
-      accordingly.
-    > Change the self.value_... to adjust the rewards for specific actions.
-    > self.training_data_size or self.experience_size, depending on whether PER is used, determine the memory size. Both can safely flow over.
-    > self.PER_e, self.PER_a, self.PER_b and self.PER_b_increment_per_sampling are parameters of PER. The increment determines how fast the sampling
-      transitions to random, apparently this influences convergence.
-    > self.learning_rate determines the rate with which our model learns.
-    > self.gamma is the discount for future rewards.
-    > self.epsilon, self.epsilon_min and self.epsilon_decay determine how fast the randomness in choosing the action decays. For using a noisy network
-      set self.epsilon to zero, it will stay that way.
-    > self.replay_batch_size, self.replay_batch_times determine how many steps are sampled and fitted at once, how often after every round.
-    > The target model weights are updated every self.update_every rounds.
+* Random data generation: 
+    * Set 'self.generate_random_data' to True to generate and save random experiences.
+    * Run once with 'True', then set to 'False' for subsequent runs to load the saved data.
+    * Repeat for new reward values or state representations.
+
+* Training vs. Loading:
+    * 'self.learning_bool = True' to train a new network.
+    * 'self.learning_bool = False' to load a pre-trained model (latest is 'model.h5').
+    * Use 'self.load_model' to specify a different model to load (e.g., 'modelN20').
+
+* Experience Replay:
+    * 'self.usePER = True' for prioritized experience replay (SumTree).
+    * 'self.usePER = False' for random sampling from a deque.
+
+* State and Model Variations:
+    * 'create_state' and 'build_model' have different versions for convolutional/dense networks.
+    * Adjust 'state_size' accordingly.
+    * Set 'self.model_version' and 'self.state_version' in 'setup'.
+
+* Target Network:
+    * 'self.use_target = True' enables a target network for improved stability.
+    * 'self.use_target = False' uses a single model.
+
+* Action Space:
+    * 'self.action_size = 6' for all actions, 5 to exclude 'BOMB', 4 for only movement.
+    * Update 'self.pactions' accordingly.
+
+* Reward Customization:
+    * Modify 'self.value_...' to fine-tune rewards for specific actions.
+
+* Memory Size:
+    * 'self.training_data_size' or 'self.experience_size' control memory capacity (deque or SumTree).
+
+* PER Parameters:
+    * 'self.PER_e', 'self.PER_a', 'self.PER_b', 'self.PER_b_increment_per_sampling' configure PER behavior.
+
+* Learning Parameters:
+    * 'self.learning_rate' sets the learning rate for Adam.
+    * 'self.gamma' is the discount factor for future rewards.
+    * 'self.epsilon', 'self.epsilon_min', 'self.epsilon_decay' control exploration/exploitation balance.
+    * For noisy networks, set 'self.epsilon' to zero.
+
+* Replay and Update Frequency:
+    * 'self.replay_batch_size', 'self.replay_batch_times' determine replay frequency and batch size.
+    * Target model weights update every 'self.update_every' rounds.
 """
-
-
 
 def setup(self):
     """Setup of the agent."""
@@ -1860,7 +1853,7 @@ def actions_possible(self,batch,noexplosions=True):
             possible=np.pad(batch[tuple(zip(*ind0))]==0,((0,0),(0,2)),"constant",constant_values=True)
             return possible
         else:
-            raise ValueError("There is no predefined model with this name!", version)
+            raise ValueError("There is no predefined model with this name!", self.state_version)
     # Can also return just True, this makes all actions possible
     else:
         return np.full((batch.shape[0],6),True)
@@ -1913,7 +1906,7 @@ def states_equal(self,new_state,old_state,proximity=True):
             pos=np.asarray(np.where(new_state[:,1:2,:,:]==1))
             pos_old=np.asarray(np.where(old_state[:,1:2,:,:]==1))
         else:
-            raise ValueError("There is no predefined model with this name!", version)
+            raise ValueError("There is no predefined model with this name!", self.state_version)
         # Size of the diamond
         n = self.compare_diamond_size
         # Get indices around position
@@ -1947,7 +1940,7 @@ def is_bomb_near(self,batch):
         # SMALL cannot contain bombs, just return False
         return np.full((batch.shape[0]),False)
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
     # Size of the diamond
     n = self.compare_diamond_bomb_size
     # Get indices around position
@@ -1967,7 +1960,7 @@ def is_bomb_near(self,batch):
         # Check whether there are bombs in diamond
         return np.any(batch[pos[0],3,index[0],index[1]][diamond,:],0)
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
 
 
 def in_range_of_bomb(self,batch):
@@ -1986,7 +1979,7 @@ def in_range_of_bomb(self,batch):
         # SMALL cannot contain bombs, just return False
         return np.full((batch.shape[0]),False)
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
     # Size of the cross
     n = self.bomb_power
     # Get indices around position
@@ -2009,7 +2002,7 @@ def in_range_of_bomb(self,batch):
         # Check whether there are bombs in cross
         return np.asarray([np.any(batch[pos[0,inde],3,index[0,cro,inde],index[1,cro,inde]]) for inde, cro in enumerate(cross)])
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
 
 
 def save_sumtree(self):
@@ -2022,7 +2015,7 @@ def save_sumtree(self):
 def load_sumtree(self):
     """ Load saved memory.
     """
-    experience = np.load("memory/"+self.load_memory+".npz")
+    memory = np.load("memory/"+self.load_memory+".npz")
     self.experience = Memory(memory["capacity"], self)
     self.experience.SumTree.tree = memory["tree"]
     self.experience.SumTree.data = memory["data"]
@@ -2069,7 +2062,7 @@ def explode_bombs(self,batch):
         # SMALL cannot contain bombs, just return the array again
         return batch
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
     # Copy batch to avoid changing the original arrays?
     batch_copy = np.copy(batch)
     # Return batch with faded explosions when there are no bombs!
@@ -2088,7 +2081,7 @@ def explode_bombs(self,batch):
             batch_copy[:,4,:,:][batch_copy[:,4,:,:]!=0]-=1
             return batch_copy
         else:
-            raise ValueError("There is no predefined model with this name!", version)
+            raise ValueError("There is no predefined model with this name!", self.state_version)
     # Size of the cross
     n = self.bomb_power
     # Get indices around position
@@ -2127,7 +2120,7 @@ def explode_bombs(self,batch):
             batch_copy[pos[0,inde],0,index[0,cro,inde],index[1,cro,inde]][batch[pos[0,inde],0,index[0,cro,inde],index[1,cro,inde]]==1]=0
         return batch_copy
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
 
 
 class SumTree(object):
@@ -2437,12 +2430,12 @@ def next_batch(self,batch,actions):
         # Get agent position
         agent_pos=np.asarray(np.where(batch[:,1:2,:,:]==1))
         # SMALL cannot contain bombs, just shift the agent.
-        next_pos=agent_pos+np.squeeze(np.transpose([self.shift_dict[act] for act in action]),0)
+        next_pos=agent_pos+np.squeeze(np.transpose([self.shift_dict[act] for act in actions]),0)
         batch_copy[agent_pos[0],1,agent_pos[2],agent_pos[3]]=0
         batch_copy[next_pos[0],1,next_pos[2],next_pos[3]]=1
         return batch
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
     # Fade explosions, bomb counters, shift player and add bombs
     if self.state_version == "ALLOH":
         # Old explosions fade
@@ -2482,7 +2475,7 @@ def next_batch(self,batch,actions):
         # Add bombs if action is bomb
         batch_copy[agent_pos[0][actions==5],3,agent_pos[2][actions==5],agent_pos[3][actions==5]]=4
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
     # Explode bombs and destroy crates, but only if there are bombs
     if pos.shape[1]!=0:
         # Size of the cross
@@ -2516,7 +2509,7 @@ def next_batch(self,batch,actions):
                 batch_copy[pos[0,inde],0,index[0,cro,inde],index[1,cro,inde]][batch[pos[0,inde],0,index[0,cro,inde],index[1,cro,inde]]==1]=0
             return batch_copy
         else:
-            raise ValueError("There is no predefined model with this name!", version)
+            raise ValueError("There is no predefined model with this name!", self.state_version)
     # Otherwise return
     else:
         return batch_copy
@@ -2546,7 +2539,7 @@ def is_terminal(self,batch):
         # SMALL cannot contain bombs, just return False
         return np.full((batch.shape[0]),False)
     else:
-        raise ValueError("There is no predefined model with this name!", version)
+        raise ValueError("There is no predefined model with this name!", self.state_version)
 
 def rotate_elem(self, elem):
     """ Just use a model that exploits this symmetry!
