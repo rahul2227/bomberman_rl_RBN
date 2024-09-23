@@ -8,7 +8,8 @@ import numpy as np
 
 import events as e
 from .callbacks import state_to_features
-from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID, ACTIONS, MOVED_AWAY_COIN, MOVED_TO_COIN, GOOD_MOVE, BAD_MOVE
+from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID, ACTIONS, MOVED_AWAY_COIN, MOVED_TO_COIN, GOOD_MOVE, BAD_MOVE, \
+    ESCAPE_BOMB_YES, ESCAPE_BOMB_NO
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -61,6 +62,18 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     # old_state_int = state_to_features(self, old_game_state)
     # new_state_int = state_to_features(self, new_game_state)
     # replacing because old_state_int == old_state and new_state_int == new_state
+
+    # Escape bomb
+    if previous_actions['BOMB_ESCAPE'] != 'SAFE' and previous_actions['BOMB_ESCAPE'] == self_action:
+        events.append(ESCAPE_BOMB_YES)
+    elif previous_actions['BOMB_ESCAPE'] == 'UP' and previous_actions['UP'] == 'OBSTACLE' and self_action == 'UP':
+        events.append(ESCAPE_BOMB_NO)
+    elif previous_actions['BOMB_ESCAPE'] == 'DOWN' and previous_actions['DOWN'] == 'OBSTACLE' and self_action == 'DOWN':
+        events.append(ESCAPE_BOMB_NO)
+    elif previous_actions['BOMB_ESCAPE'] == 'LEFT' and previous_actions['LEFT'] == 'OBSTACLE' and self_action == 'LEFT':
+        events.append(ESCAPE_BOMB_NO)
+    elif previous_actions['BOMB_ESCAPE'] == 'RIGHT' and previous_actions['RIGHT'] == 'OBSTACLE' and self_action == 'RIGHT':
+        events.append(ESCAPE_BOMB_NO)
 
     # Append event for reward if the agent chose a direction from the current coin direction
     # If moved towards coin then MOVED_TO_COIN else MOVED_AWAY_COIN
@@ -179,6 +192,8 @@ def reward_from_events(self, events: List[str]) -> int:
         e.WAITED: -25,  # -25
         GOOD_MOVE: 30,
         BAD_MOVE: -25,  # -13
+        ESCAPE_BOMB_YES: 35,
+        ESCAPE_BOMB_NO: -32,
     }
     reward_sum = 0
     for event in events:

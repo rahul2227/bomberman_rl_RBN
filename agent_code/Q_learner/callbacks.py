@@ -4,7 +4,7 @@ from collections import deque
 
 import numpy as np
 
-from agent_code.Q_learner.helpers import ACTIONS, valid_action
+from agent_code.Q_learner.helpers import ACTIONS, valid_action, BOMB_MOVES
 
 
 def setup(self):
@@ -49,7 +49,7 @@ def act(self, game_state: dict) -> str:
 def state_to_features(self, game_state: dict) -> np.array:
     features = {}
 
-    # checking for obstacles
+    # FEATURE1: checking for obstacles
     # this returns a list of walls in the agent's vicinity
     obstacles = check_the_presence_of_walls(self, game_state)
     for direction in obstacles:
@@ -61,10 +61,14 @@ def state_to_features(self, game_state: dict) -> np.array:
     for direction in directions:
         features[direction] = f'MOVE_{direction}'
 
+    # FEATURE2: checking for coin presence and chasing coin
     coins_present, nearest_coin = check_for_coin_presence(self, game_state)
 
     nearest_coin_path = calculate_path_to_nearest_coin(self, game_state, nearest_coin, features)
     features['COIN_DIRECTION'] = nearest_coin_path
+
+    # FEATURE3: escaping bomb
+    features['BOMB_ESCAPE'] = escape_bomb(self, game_state)
 
     features = dict(sorted(features.items()))
     self.logger.debug(f"features - state_to_features: {features}")
@@ -215,7 +219,7 @@ def calculate_path_to_nearest_coin(self, game_state, nearest_coin, directions):
 
 # MARK: BI-Directional BFS implementation
 
-def get_neighbors(position, field):
+def get_neighbors_old(position, field):
     x, y = position
     neighbors = []
 
@@ -226,6 +230,22 @@ def get_neighbors(position, field):
     for nx, ny in possible_moves:
         if field.shape[0] > nx >= 0 == field[nx, ny] and 0 <= ny < field.shape[1]:
             neighbors.append((nx, ny))
+
+    return neighbors
+
+
+def get_neighbors(position, field):
+    x, y = position
+    neighbors = []
+
+    # Check the possible moves (UP, DOWN, LEFT, RIGHT)
+    possible_moves = [(x, y - 1), (x, y + 1), (x - 1, y), (x + 1, y)]
+
+    # Only allow valid moves (within bounds and free tiles)
+    for nx, ny in possible_moves:
+        if 0 <= nx < field.shape[0] and 0 <= ny < field.shape[1]:  # Check within bounds
+            if field[nx, ny] == 0:  # Check if the tile is free (not an obstacle)
+                neighbors.append((nx, ny))
 
     return neighbors
 
@@ -296,3 +316,68 @@ def calculate_safe_and_dangerous_tiles(explosion_map: np.array):
                 dangerous_tiles.append((x, y))
 
     return safe_tiles, dangerous_tiles
+
+
+def is_bomb_nearby(bombs, agent_position):
+    for bomb_pos, _ in bombs:
+        # Check if the bomb is within 3 tiles in horizontal or vertical direction
+        if abs(bomb_pos[0] - agent_position[0]) <= 3 and bomb_pos[1] == agent_position[1]:
+            return True
+        if abs(bomb_pos[1] - agent_position[1]) <= 3 and bomb_pos[0] == agent_position[0]:
+            return True
+    return False
+
+
+def escape_bomb(self, game_state):
+    agent_position = game_state['self'][-1]
+    bombs = game_state['bombs']
+    explosion_map = game_state['explosion_map']
+
+    # Check if there's a bomb near the agent
+    if is_bomb_nearby(bombs, agent_position):
+        # Find all safe tiles
+        safe_tiles, _ = calculate_safe_and_dangerous_tiles(explosion_map)
+
+        # Try to find a safe path using bidirectional BFS
+        for safe_tile in safe_tiles:
+            path = bidirectional_bfs(agent_position, safe_tile, game_state)
+            if path:
+                # Determine the direction to move towards the safe tile
+                next_step = path[1]  # The first step in the path after the agent's position
+                move_direction = (next_step[0] - agent_position[0], next_step[1] - agent_position[1])
+
+                # Map the movement to an action
+                for action, move in BOMB_MOVES.items():
+                    if move == move_direction:
+                        self.logger.debug(f'action returned by escape bomb: {action}')
+                        return action
+
+        # If no safe path is found, fallback to random valid action
+        valid_actions = get_valid_actions(agent_position, game_state)
+        if valid_actions:
+            self.logger.debug(f'No safe path is found')
+            return random.choice(valid_actions)
+
+    # Default action if no bomb is nearby or no valid moves
+    return 'SAFE'
+
+
+def get_valid_actions(agent_position, game_state):
+    """
+    Get valid actions the agent can take based on the game field.
+    This ensures that the agent doesn't try to move into obstacles or walls.
+    Not using the check_for_wall_presence as to not interfere with the logic of NO_OBSTACLE and other
+    features.
+    """
+    field = game_state['field']
+    valid_actions = []
+
+    for action, move in BOMB_MOVES.items():
+        next_pos = (agent_position[0] + move[0], agent_position[1] + move[1])
+
+        # Check if the next position is within bounds and not blocked
+        if 0 <= next_pos[0] < field.shape[0] and 0 <= next_pos[1] < field.shape[1]:
+            if field[next_pos[0], next_pos[1]] == 0:  # Check for free tiles (not an obstacle)
+                valid_actions.append(action)
+
+    return valid_actions
