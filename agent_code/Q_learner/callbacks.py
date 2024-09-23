@@ -77,6 +77,10 @@ def state_to_features(self, game_state: dict) -> np.array:
     features['CRATE_PRESENCE'] = check_the_presence_of_crates(self, game_state)
     self.logger.debug(f"crate presence: {features['CRATE_PRESENCE']}")
 
+    # FEATURE 5: Escape or bomb agent
+    features['AGENT'] = check_the_presence_of_agents(self, game_state)
+    self.logger.debug(f"agent presence: {features['AGENT']}")
+
     features = dict(sorted(features.items()))
     self.logger.debug(f"features - state_to_features: {features}")
 
@@ -143,12 +147,49 @@ def check_the_presence_of_crates(self, game_state: dict) -> np.array:
     crate = ''
 
     #  because the field in the coordinates is transposed
-    if arena[coord_x][coord_y + 1] == 1 or arena[coord_x][coord_y - 1] == 1 or arena[coord_x - 1][coord_y] == 1 or arena[coord_x + 1][coord_y] == 1:
+    if arena[coord_x][coord_y + 1] == 1 or arena[coord_x][coord_y - 1] == 1 or arena[coord_x - 1][coord_y] == 1 or \
+            arena[coord_x + 1][coord_y] == 1:
         crate = 'CRATE'
     else:
         crate = 'NO_CRATE'
 
     return crate
+
+
+# def check_the_presence_of_agents(self, game_state: dict) -> np.array:
+#     arena = game_state['field']
+#     current_position = game_state['self'][-1]
+#     coord_x, coord_y = current_position
+#     agent = ''
+#     all_agents = [agent for agent in game_state['others'][-1]]
+#
+#     #  because the field in the coordinates is transposed
+#     if arena[coord_x][coord_y + 1] in all_agents or arena[coord_x][coord_y - 1] in all_agents.any() or arena[coord_x - 1][
+#         coord_y] in all_agents.any() or arena[coord_x + 1][coord_y] in all_agents.any():
+#         agent = 'AGENT'
+#     else:
+#         agent = 'NO_AGENT'
+#
+#     return agent
+
+
+def check_the_presence_of_agents(self, game_state: dict) -> str:
+    arena = game_state['field']
+    current_position = game_state['self'][-1]
+    coord_x, coord_y = current_position
+    all_agents = [agent[-1] for agent in game_state['others']]  # Get positions of all other agents
+
+    # Check adjacent positions (up, down, left, right) for presence of agents
+    adjacent_positions = [(coord_x, coord_y + 1), (coord_x, coord_y - 1), (coord_x - 1, coord_y),
+                          (coord_x + 1, coord_y)]
+
+    for pos_x, pos_y in adjacent_positions:
+        # Check if position is within bounds and if an agent is present
+        if 0 <= pos_x < arena.shape[0] and 0 <= pos_y < arena.shape[1]:
+            if (pos_x, pos_y) in all_agents:
+                return 'AGENT'
+
+    return 'NO_AGENT'
 
 
 def check_for_coin_presence(self, game_state: dict, near_tiles=9) -> (int, list):

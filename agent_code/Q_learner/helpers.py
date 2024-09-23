@@ -81,7 +81,8 @@ def valid_action(self) -> np.array:
         # ['COIN_UP', 'COIN_DOWN', 'COIN_LEFT', 'COIN_RIGHT', 'NO_COIN']  # This is the state to coin direction
         ['UP', 'DOWN', 'LEFT', 'RIGHT', 'NO_COIN'],  # These are the action I should take upon coin encounter
         ['UP', 'DOWN', 'LEFT', 'RIGHT', 'SAFE'],
-        ['CRATE', 'NO_CRATE']
+        ['CRATE', 'NO_CRATE'],
+        ['AGENT', 'NO_AGENT']
     ))
 
     # This will create every possible combination of the states for the features
@@ -94,6 +95,7 @@ def valid_action(self) -> np.array:
             'COIN_DIRECTION': state[4],
             'BOMB_ESCAPE': state[5],
             'CRATE_PRESENCE': state[6],
+            'AGENT': state[7],
         }
         features.append(feature)
     return features

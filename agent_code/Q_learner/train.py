@@ -82,6 +82,12 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     else:
         events.append(BAD_BOMB)
 
+    # FEATURE AGENT Present
+    if self_action == 'BOMB' and previous_actions['AGENT'] == 'AGENT':
+        events.append(GOOD_BOMB)
+    else:
+        events.append(BAD_BOMB)
+
     # Append event for reward if the agent chose a direction from the current coin direction
     # If moved towards coin then MOVED_TO_COIN else MOVED_AWAY_COIN
     self.logger.debug(f'previous_actions[COIN_DIRECTION]: {previous_actions['COIN_DIRECTION']}')
