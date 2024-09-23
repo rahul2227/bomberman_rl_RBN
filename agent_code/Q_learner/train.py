@@ -9,7 +9,7 @@ import numpy as np
 import events as e
 from .callbacks import state_to_features
 from .helpers import OBSTACLE_HIT, OBSTACLE_AVOID, ACTIONS, MOVED_AWAY_COIN, MOVED_TO_COIN, GOOD_MOVE, BAD_MOVE, \
-    ESCAPE_BOMB_YES, ESCAPE_BOMB_NO
+    ESCAPE_BOMB_YES, ESCAPE_BOMB_NO, GOOD_BOMB, BAD_BOMB
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -72,8 +72,15 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
         events.append(ESCAPE_BOMB_NO)
     elif previous_actions['BOMB_ESCAPE'] == 'LEFT' and previous_actions['LEFT'] == 'OBSTACLE' and self_action == 'LEFT':
         events.append(ESCAPE_BOMB_NO)
-    elif previous_actions['BOMB_ESCAPE'] == 'RIGHT' and previous_actions['RIGHT'] == 'OBSTACLE' and self_action == 'RIGHT':
+    elif previous_actions['BOMB_ESCAPE'] == 'RIGHT' and previous_actions[
+        'RIGHT'] == 'OBSTACLE' and self_action == 'RIGHT':
         events.append(ESCAPE_BOMB_NO)
+
+    # FEATURE CRATE BOMB
+    if self_action == 'BOMB' and previous_actions['CRATE_PRESENCE'] != 'NO_CRATE':
+        events.append(GOOD_BOMB)
+    else:
+        events.append(BAD_BOMB)
 
     # Append event for reward if the agent chose a direction from the current coin direction
     # If moved towards coin then MOVED_TO_COIN else MOVED_AWAY_COIN
@@ -182,18 +189,20 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {  # making the negatives to zero
-        e.COIN_COLLECTED: 20,
-        MOVED_TO_COIN: 30,
-        MOVED_AWAY_COIN: -25,  # before -12
-        OBSTACLE_HIT: -20,  # TODO: award this also when the agent has hit another agent  # -15
+        e.COIN_COLLECTED: 45,
+        MOVED_TO_COIN: 35,
+        MOVED_AWAY_COIN: -60,  # before -12
+        OBSTACLE_HIT: -50,  # TODO: award this also when the agent has hit another agent  # -15
         OBSTACLE_AVOID: 25,
-        e.KILLED_SELF: -50,
-        e.BOMB_DROPPED: 0,
-        e.WAITED: -25,  # -25
+        # e.KILLED_SELF: -50,
+        # e.BOMB_DROPPED: 0,
+        # e.WAITED: -25,  # -25
         GOOD_MOVE: 30,
-        BAD_MOVE: -25,  # -13
+        BAD_MOVE: -50,  # -13
         ESCAPE_BOMB_YES: 35,
-        ESCAPE_BOMB_NO: -32,
+        ESCAPE_BOMB_NO: -60,
+        GOOD_BOMB: 60,
+        BAD_BOMB: -80,
     }
     reward_sum = 0
     for event in events:

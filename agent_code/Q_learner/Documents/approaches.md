@@ -49,3 +49,11 @@ positive values.
 This feature is implemented for the agent to escape from the bomb in the vicinity. The idea is to get the explosion map and 
 coordinates of the bomb and mark all the exploded tiles as death tiles. The other tiles in this map will be safe tiles. Now 
 from reward tuning we will be teaching our agent to only be in safe tiles and not in the death tiles.
+
+### Training log update
+
+| Scenario    | Training Iterations | Empty States | Models (trained against)                                                  | Notes                                                                  | Possible fix                                           |
+|-------------|---------------------|--------------|---------------------------------------------------------------------------|------------------------------------------------------------------------|--------------------------------------------------------|
+| Coin heaven | 5000                | 381          | [Q-learner, Peaceful agent, Coin collector agent, rule based agent]       | For some reason agent starts moving only when there are no coin nearby | Maybe better training with a decaying exploration rate |
+| Coin heaven | 2500                | 374          | [Q-learner, Coin collector agent, Coin collector agent, rule based agent] |                                                                        |                                                        |
+| Classic     | 2500                | 369          | [Q-learner, Coin collector agent, Coin collector agent, rule based agent] |                                                                        |                                                        |

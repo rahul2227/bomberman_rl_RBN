@@ -4,22 +4,25 @@ from collections import deque
 
 import numpy as np
 
-from agent_code.Q_learner.helpers import ACTIONS, valid_action, BOMB_MOVES
+from agent_code.Q_learner.helpers import ACTIONS, valid_action, BOMB_MOVES, calculate_decay_rate
 
 
 def setup(self):
     q_table_folder = "q_tables/"
     self.new_state = None
     self.old_state = None
-    self.valid_actions_list = valid_action()
+    self.valid_actions_list = valid_action(self)
     if self.train:
         self.logger.info("Q-learning agent from scratch")
         self.number_of_actions = len(self.valid_actions_list)
-        self.Q_table = np.zeros(shape=(self.number_of_actions, len(ACTIONS)))  # currently 4 * 6
+        self.Q_table = np.zeros(shape=(self.number_of_actions, len(ACTIONS)))
+        self.logger.debug(f"Q-table is {self.Q_table.shape}")
         # self.logger.info(f"Initialized Q-table = {self.Q_table}")
         # weights = np.random.rand(len(ACTIONS))
         # self.model = weights / weights.sum()
-        self.exploration_rate = 0.8  # random choice
+        self.exploration_rate_initial = 1.0  # random choice
+        self.exploration_rate_end = 0.02
+        self.exploration_rate = calculate_decay_rate(self)
     else:
         self.logger.info("Loading q-table from saved state.")
         self.Q_table = load_q_table(self, q_table_folder)
@@ -70,6 +73,10 @@ def state_to_features(self, game_state: dict) -> np.array:
     # FEATURE3: escaping bomb
     features['BOMB_ESCAPE'] = escape_bomb(self, game_state)
 
+    # FEATURE4: CRATE
+    features['CRATE_PRESENCE'] = check_the_presence_of_crates(self, game_state)
+    self.logger.debug(f"crate presence: {features['CRATE_PRESENCE']}")
+
     features = dict(sorted(features.items()))
     self.logger.debug(f"features - state_to_features: {features}")
 
@@ -90,7 +97,7 @@ def find_missing_directions(self, directions) -> np.array:
 
     # Find the difference between the two sets, and remove 'WAIT' if present
     missing_direction = list(action_set - direction_set)
-    return [dir for dir in missing_direction if dir != 'WAIT' and dir != 'NO_OBSTACLE']
+    return [dir for dir in missing_direction if dir != 'WAIT' and dir != 'NO_OBSTACLE' and dir != 'BOMB']
 
 
 def load_q_table(self, q_table_folder):
@@ -129,7 +136,22 @@ def check_the_presence_of_walls(self, game_state: dict) -> np.array:
     return obstacle
 
 
-def check_for_coin_presence(self, game_state: dict, near_tiles=5) -> (int, list):
+def check_the_presence_of_crates(self, game_state: dict) -> np.array:
+    arena = game_state['field']
+    current_position = game_state['self'][-1]
+    coord_x, coord_y = current_position
+    crate = ''
+
+    #  because the field in the coordinates is transposed
+    if arena[coord_x][coord_y + 1] == 1 or arena[coord_x][coord_y - 1] == 1 or arena[coord_x - 1][coord_y] == 1 or arena[coord_x + 1][coord_y] == 1:
+        crate = 'CRATE'
+    else:
+        crate = 'NO_CRATE'
+
+    return crate
+
+
+def check_for_coin_presence(self, game_state: dict, near_tiles=9) -> (int, list):
     """
     This function checks if the coin is present on the field within a certain radius or not.
     Args:
